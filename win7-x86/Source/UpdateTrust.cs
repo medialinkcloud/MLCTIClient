@@ -1,0 +1,7 @@
+namespace MedialinkCTIClient;
+internal static class UpdateTrust
+{
+    // Inseriti da APPLY_A5.ps1 a partire dalla chiave pubblica esistente.
+    internal const string ModulusBase64 = "qwOWlDmPHLfh8X8ZpS9nS6t2koh4qrrtdME0WBj4xUtXuSbbITa8ZHcXYjQ7mFnRhyaPaapq+f1u4dHbRhx9bQU8F6mNo2wa45reGrrxVacTv5YK6zn61OkgMGf2gTOJZPCLMdTGFYIxHeUrWucuSZ4rDaZgpy2BF9zSTa8O5b3yztINchpFf8afjSLuhTG0ID7rYvCV70d1NZktmSz1OydeelnN4qIRZ+W9UgqeEZnGYMMR4pGRK/qCtDUzIQfY0XXHeyTikTqLUW8ehZt9qFdVYPRcC6Hy/BUrAavMfUoLWhKrog6o7FPGjWnUbgdwsaCln6NpbNvi7qZm9XVNUzDfIgHXjWeAjj5fL7Lj5Jmc890l+tQ3xyEQOlLdIu7ybeRdHC1w4Um2sZD/jwLHCXotD9x9ERYDXLhrthn/8fvueu6WtLKrvz3G0jHl/nOA68HvWObRlcraLxaxocO2vq5PJhpYCKNcZ3+bYIPkJsrJV96ZXO+A+4rcrAoCsZuF";
+    internal const string ExponentBase64 = "AQAB";
+}

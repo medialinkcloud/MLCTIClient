@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MLCTIClient</AssemblyName>
+    <RootNamespace>MedialinkCTIClient</RootNamespace>
+    <Version>7.4.18</Version>
+    <InformationalVersion>R7.4 Update 18</InformationalVersion>
+    <ApplicationIcon>Assets\MedialinkCTI.ico</ApplicationIcon>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <PlatformTarget>x86</PlatformTarget>
+    <Prefer32Bit>true</Prefer32Bit>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <FileVersion>7.4.18.0</FileVersion>
+    <AssemblyVersion>7.4.18.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
+    <Reference Include="System.DirectoryServices.Protocols" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Management" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\MedialinkCTI.ico" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.ico" />
+    <EmbeddedResource Include="Assets\MedialinkCTI.TrayLarge.ico" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.TrayLarge.ico" />
+    <EmbeddedResource Include="Assets\MedialinkCTI.png" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.png" />
+    <EmbeddedResource Include="Assets\CallBlue.png" LogicalName="MedialinkCTIClient.Assets.CallBlue.png" />
+    <EmbeddedResource Include="Assets\Outgoing.png" LogicalName="MedialinkCTIClient.Assets.Outgoing.png" />
+    <EmbeddedResource Include="Assets\Incoming.png" LogicalName="MedialinkCTIClient.Assets.Incoming.png" />
+    <EmbeddedResource Include="Assets\Missed.png" LogicalName="MedialinkCTIClient.Assets.Missed.png" />
+  </ItemGroup>
+</Project>

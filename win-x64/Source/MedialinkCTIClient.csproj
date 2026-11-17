@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>MLCTIClient</AssemblyName>
+    <RootNamespace>MedialinkCTIClient</RootNamespace>
+    <Version>7.4.18</Version>
+    <InformationalVersion>R7.4 Update 18</InformationalVersion>
+    <ApplicationIcon>Assets\MedialinkCTI.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <FileVersion>7.4.18.0</FileVersion>
+    <AssemblyVersion>7.4.18.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="10.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\MedialinkCTI.ico" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.ico" />
+    <EmbeddedResource Include="Assets\MedialinkCTI.TrayLarge.ico" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.TrayLarge.ico" />
+    <EmbeddedResource Include="Assets\MedialinkCTI.png" LogicalName="MedialinkCTIClient.Assets.MedialinkCTI.png" />
+    <EmbeddedResource Include="Assets\CallBlue.png" LogicalName="MedialinkCTIClient.Assets.CallBlue.png" />
+    <EmbeddedResource Include="Assets\Outgoing.png" LogicalName="MedialinkCTIClient.Assets.Outgoing.png" />
+    <EmbeddedResource Include="Assets\Incoming.png" LogicalName="MedialinkCTIClient.Assets.Incoming.png" />
+    <EmbeddedResource Include="Assets\Missed.png" LogicalName="MedialinkCTIClient.Assets.Missed.png" />
+  </ItemGroup>
+</Project>
