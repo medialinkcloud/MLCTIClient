@@ -267,6 +267,12 @@ internal sealed class SettingsForm : Form
 
         Section(t, "CONTROLLO TELEFONO");
         PhoneTypeField(t);
+        Field(t, "URL Gateway Avaya", "AvayaGatewayUrl", source.AvayaGatewayUrl,
+            help: "HTTPS con certificato attendibile. HTTP sulla sola interfaccia loopback.");
+        TrackPhoneRow(t, "AvayaGatewayUrl");
+        Field(t, "Chiave API Gateway Avaya", "AvayaGatewayKey", source.AvayaGatewayKey, true,
+            "Chiave del client API autorizzato sul Gateway, protetta con DPAPI.");
+        TrackPhoneRow(t, "AvayaGatewayKey");
         Check(t, "Rileva IP automaticamente da AMI", "AutoDetectPhoneAddress", source.AutoDetectPhoneAddress,
             "Consigliato. Legge i contatti SIP registrati sulla UCM. Se più telefoni non sono distinguibili, " +
             "il client non ne seleziona uno a caso.");
@@ -358,6 +364,8 @@ internal sealed class SettingsForm : Form
             SetPhoneRow("PhoneControlPassword", grandstream);
             SetPhoneRow("SnomWebUsername", snom);
             SetPhoneRow("SnomWebPassword", snom);
+            SetPhoneRow("AvayaGatewayUrl", vendor == "Avaya");
+            SetPhoneRow("AvayaGatewayKey", vendor == "Avaya");
             SetPhoneRow("YealinkWebUsername", yealink);
             SetPhoneRow("YealinkWebPassword", yealink);
             SetPhoneRow("PhoneCtiProtocol", webControl);
@@ -504,7 +512,7 @@ internal sealed class SettingsForm : Form
             "Yealink generico: richieste dirette HTTPS Action URI al telefono, senza Action URL né listener sul PC; " +
             "abilitare Action URI e autorizzare solo l'IP del computer sul telefono. Alcune funzioni variano col firmware."), 0, row);
         phoneType.DropDownStyle = ComboBoxStyle.DropDownList;
-        phoneType.Items.AddRange(new object[] { "Grandstream", "Snom", "Yealink", "Altro" });
+        phoneType.Items.AddRange(new object[] { "Grandstream", "Snom", "Yealink", "Avaya", "Altro" });
         phoneType.SelectedItem = phoneType.Items.Contains(source.PhoneType) ? source.PhoneType : "Altro";
         phoneType.Dock = DockStyle.Fill;
         phoneType.Margin = new Padding(3, 9, 6, 7);
@@ -631,6 +639,8 @@ internal sealed class SettingsForm : Form
             PhoneControlPassword = inputs["PhoneControlPassword"].Text,
             SnomWebUsername = inputs["SnomWebUsername"].Text.Trim(),
             SnomWebPassword = inputs["SnomWebPassword"].Text,
+            AvayaGatewayUrl = inputs["AvayaGatewayUrl"].Text.Trim(),
+            AvayaGatewayKey = inputs["AvayaGatewayKey"].Text.Trim(),
             YealinkWebUsername = inputs["YealinkWebUsername"].Text.Trim(),
             YealinkWebPassword = inputs["YealinkWebPassword"].Text,
             PhoneCtiProtocol = phoneCtiProtocol.SelectedItem?.ToString() ?? "Automatico",
@@ -675,6 +685,7 @@ internal sealed class SettingsForm : Form
         if (!int.TryParse(inputs["PhoneCtiPort"].Text, out var ctiPort) || ctiPort is < 0 or > 65535)
             throw new InvalidOperationException("Porta CTI telefono: indicare 0 oppure una porta 1-65535.");
         c.PhoneCtiPort = ctiPort;
+        if (c.PhoneType == "Avaya") AvayaGatewayClient.Validate(c);
         if (c.PhoneType == "Yealink" &&
             (string.IsNullOrWhiteSpace(c.YealinkWebUsername) != string.IsNullOrWhiteSpace(c.YealinkWebPassword)))
             throw new InvalidOperationException("Yealink: specificare sia utente sia password web oppure lasciarli entrambi vuoti.");

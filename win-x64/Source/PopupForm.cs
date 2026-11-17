@@ -11,6 +11,10 @@ internal sealed class PopupForm : Form
     private AppConfig config;
     private readonly Func<bool> openSettings;
     private readonly AmiClient ami = new();
+    private readonly System.Windows.Forms.Timer avayaBlfTimer = new() { Interval = 3000 };
+    private IReadOnlyList<AvayaBlfRow> avayaBlf = Array.Empty<AvayaBlfRow>();
+    private bool avayaBlfBusy;
+    private bool avayaBlfUnavailable;
     private readonly LdapClient ldap = new();
     private readonly CdrClient cdr = new();
     private readonly Button bookTab = new(), callsTab = new(), refresh = new();
@@ -159,6 +163,8 @@ internal sealed class PopupForm : Form
         presenceTimer.Interval = PresenceRefreshIntervalMs(config.PresenceRefreshSeconds);
         presenceTimer.Tick += async (_, _) => await RefreshPresenceAsync();
         presenceTimer.Start();
+        avayaBlfTimer.Tick += async (_, _) => await RefreshAvayaBlfAsync();
+        avayaBlfTimer.Start();
 
     }
 
@@ -225,6 +231,7 @@ internal sealed class PopupForm : Form
             if (IsHandleCreated) PersistWindowBounds();
             debounce.Stop(); liveClock.Stop(); presenceTimer.Stop(); presenceTimer.Dispose();
             activeSearch?.Cancel();
+            avayaBlfTimer.Dispose();
             miniCall.Dispose();
             debounce.Dispose(); liveClock.Dispose(); controlHelp.Dispose(); dtmfQueue.Dispose();
             plusFont.Dispose(); editFont.Dispose();
@@ -692,6 +699,7 @@ internal sealed class PopupForm : Form
         RenderBlf();
         Shown += async (_, _) => await LoadContactsAsync();
         Shown += async (_, _) => await RefreshPresenceAsync();
+        Shown += async (_, _) => await RefreshAvayaBlfAsync();
     }
 
     public void ResetBlf()
@@ -702,7 +710,8 @@ internal sealed class PopupForm : Form
 
     public void UpdateBlf(string extension, BlfState state)
     {
-        if (!BlfLogic.Parse(config.BlfExtensions, config.Extension).Any(e => e.Extension == extension)) return;
+        if (config.PhoneType == "Avaya" ||
+            !BlfLogic.Parse(config.BlfExtensions, config.Extension).Any(e => e.Extension == extension)) return;
         blfStates[extension] = state;
         RenderBlf();
     }
@@ -712,6 +721,7 @@ internal sealed class PopupForm : Form
 
     private async Task RefreshPresenceAsync()
     {
+        if (config.PhoneType == "Avaya") return;
 
         DiagnosticLog.Info("PRESENCE_ENTER",
             "busy="+presenceBusy+
@@ -943,6 +953,31 @@ internal sealed class PopupForm : Form
     }
 
     // A.6.10: filtro solo visuale; nessuna modifica alle sottoscrizioni AMI / presenza.
+    private async Task RefreshAvayaBlfAsync()
+    {
+        if (config.PhoneType != "Avaya" || !Visible || IsDisposed || avayaBlfBusy) return;
+        var current = config;
+        avayaBlfBusy = true;
+        try
+        {
+            var rows = await AvayaGatewayClient.BlfAsync(current);
+            if (IsDisposed || !ReferenceEquals(config, current)) return;
+            if (!avayaBlfUnavailable && avayaBlf.SequenceEqual(rows)) return;
+            avayaBlfUnavailable = false;
+            avayaBlf = rows;
+            RenderBlf();
+        }
+        catch (Exception e)
+        {
+            if (IsDisposed || !ReferenceEquals(config, current) || avayaBlfUnavailable) return;
+            DiagnosticLog.Error("AVAYA_BLF_FAILED", e);
+            avayaBlfUnavailable = true;
+            avayaBlf = Array.Empty<AvayaBlfRow>();
+            RenderBlf();
+        }
+        finally { avayaBlfBusy = false; }
+    }
+
     private void RenderBlf()
     {
         if (IsDisposed) return;
@@ -950,11 +985,16 @@ internal sealed class PopupForm : Form
         try
         {
             blfPanel.Controls.Clear();
-            var entries = BlfLogic.Parse(config.BlfExtensions, config.Extension);
+            bool avaya = config.PhoneType == "Avaya";
+            IReadOnlyList<BlfEntry> entries = avaya
+                ? avayaBlf.Select(row => new BlfEntry(row.Extension, row.Name)).ToArray()
+                : BlfLogic.Parse(config.BlfExtensions, config.Extension);
             if (entries.Count == 0)
             {
                 blfPanel.Controls.Add(new Label { Width=120, Height=73,
-                    Text="Nessun BLF configurato. Apri Impostazioni → BLF.",
+                    Text=avaya
+                        ? (avayaBlfUnavailable ? "BLF Avaya non disponibile." : "Nessun interno BLF Avaya disponibile.")
+                        : "Nessun BLF configurato. Apri Impostazioni → BLF.",
                     Padding=new Padding(5,10,0,0), ForeColor=Color.DimGray });
                 return;
             }
@@ -972,7 +1012,9 @@ internal sealed class PopupForm : Form
             }
             foreach (var entry in entries)
             {
-                BlfState s = blfStates.TryGetValue(entry.Extension, out var state) ? state : BlfState.Unknown;
+                BlfState s = avaya
+                    ? AvayaGatewayClient.MapStatus(avayaBlf.First(row => row.Extension == entry.Extension).Status)
+                    : blfStates.TryGetValue(entry.Extension, out var state) ? state : BlfState.Unknown;
                 var color = s switch {
                     BlfState.Free => Color.FromArgb(29,178,86), BlfState.Busy => Color.FromArgb(219,62,61),
                     BlfState.Ringing => Color.FromArgb(244,196,48), BlfState.Dnd => Color.FromArgb(149,85,206),
@@ -992,7 +1034,8 @@ internal sealed class PopupForm : Form
                 var btn = new Button { Width=120, Height=47, Margin=new Padding(0, 1, 0, 1),
                     Text="", FlatStyle=FlatStyle.Flat, BackColor=blfSidebar.BackColor,
                     Font=new Font("Segoe UI",7.6f,FontStyle.Bold),
-                    Enabled=s==BlfState.Free || s==BlfState.Busy || s==BlfState.Ringing || s==BlfState.Dnd };
+                    Enabled=avaya ? s==BlfState.Free && ext!=config.Extension :
+                        s==BlfState.Free || s==BlfState.Busy || s==BlfState.Ringing || s==BlfState.Dnd };
                 btn.FlatAppearance.BorderSize=0;
                 btn.FlatAppearance.MouseOverBackColor=blfSidebar.BackColor;
                 btn.FlatAppearance.MouseDownBackColor=blfSidebar.BackColor;
@@ -1026,6 +1069,12 @@ internal sealed class PopupForm : Form
                 };
                 btn.Click += async (_, _) =>
                 {
+                    if (avaya)
+                    {
+                        if (config.PhoneType == "Avaya" && s == BlfState.Free && ext != config.Extension)
+                            await DialAsync(ext);
+                        return;
+                    }
                     var current = blfStates.TryGetValue(ext,out var live) ? live : BlfState.Unknown;
                     var number = BlfLogic.Target(current,ext,config.BlfPickupPrefix);
                     if(number==null) { status.Text="BLF: stato non disponibile per la composizione."; return; }
@@ -1778,7 +1827,10 @@ internal sealed class PopupForm : Form
 
     public void UpdateConfiguration(AppConfig value)
     {
+        activeSearch?.Cancel();
         config = value;
+        avayaBlf = Array.Empty<AvayaBlfRow>();
+        avayaBlfUnavailable = false;
         presenceTimer.Interval = PresenceRefreshIntervalMs(config.PresenceRefreshSeconds);
         DiagnosticLog.Info("PRESENCE_REFRESH_CONFIG", "interval_seconds=" + (presenceTimer.Interval / 1000));
         ResetBlf();
@@ -1893,9 +1945,12 @@ internal sealed class PopupForm : Form
         var token = new CancellationTokenSource(); activeSearch = token;
         try
         {
-            status.Text = "Ricerca LDAP in corso...";
+            bool avaya = config.PhoneType == "Avaya";
+            status.Text = avaya ? "Ricerca rubrica Avaya..." : "Ricerca LDAP in corso...";
             refresh.Enabled = false;
-            var results = afterMutation
+            var results = avaya
+                ? await AvayaGatewayClient.SearchAsync(config, search.Text, token.Token)
+                : afterMutation
                 ? await ldap.SearchAfterMutationAsync(config, search.Text, token.Token)
                 : await ldap.SearchAsync(config, search.Text, token.Token);
             if (token.IsCancellationRequested || showCalls) return;
@@ -1905,7 +1960,7 @@ internal sealed class PopupForm : Form
                 !grid.Columns.Contains("phone") || !grid.Columns.Contains("call"))
                 SetupGrid(false);
             RenderLiveCall();
-            DiagnosticLog.Info("UI_LDAP_ROWS", $"numbers={results.Count}");
+            DiagnosticLog.Info(avaya ? "UI_AVAYA_ROWS" : "UI_LDAP_ROWS", $"numbers={results.Count}");
             RenderContactRows();
         }
         catch (OperationCanceledException) { }
@@ -1913,7 +1968,7 @@ internal sealed class PopupForm : Form
         {
             if (!token.IsCancellationRequested)
             {
-                DiagnosticLog.Error("UI_LDAP_LOAD_FAILED", e);
+                DiagnosticLog.Error(config.PhoneType == "Avaya" ? "UI_AVAYA_LOAD_FAILED" : "UI_LDAP_LOAD_FAILED", e);
                 if (!showCalls)
                 {
                     contacts.Clear();
@@ -1921,7 +1976,8 @@ internal sealed class PopupForm : Form
                     recordCount.Text = "Rubrica: 0 record";
                     RenderLiveCall();
                 }
-                status.Text = e is DirectoryOperationException
+                status.Text = config.PhoneType == "Avaya" ? "Rubrica Avaya: " + e.Message
+                    : e is DirectoryOperationException
                     ? "LDAP: ramo non raggiungibile. Verificare Base DN e rubrica sulla UCM."
                     : "LDAP: ricerca non disponibile. " + e.Message;
             }
@@ -2809,10 +2865,17 @@ internal sealed class PopupForm : Form
         {
             status.Text = config.PhoneType switch
             {
+                "Avaya" => "Invio chiamata al Gateway Avaya...",
                 "Snom" => "Avvio chiamata Snom HTTP Digest...",
                 "Yealink" => "Avvio chiamata Yealink (web diretto)...",
                 _ => "Avvio immediato chiamata AMI..."
             };
+            if (config.PhoneType == "Avaya")
+            {
+                await AvayaGatewayClient.DialAsync(config, target);
+                status.Text = $"Richiesta accettata dal Gateway Avaya: {target}.";
+                return;
+            }
             OutgoingDialRequested?.Invoke(target);
             try
             {
@@ -2841,7 +2904,8 @@ internal sealed class PopupForm : Form
         }
         catch (Exception e)
         {
-            DiagnosticLog.Error(config.PhoneType == "Snom" ? "SNOM_DIAL_REQUEST_FAILED" :
+            DiagnosticLog.Error(config.PhoneType == "Avaya" ? "AVAYA_DIAL_REQUEST_FAILED" :
+                config.PhoneType == "Snom" ? "SNOM_DIAL_REQUEST_FAILED" :
                 config.PhoneType == "Yealink" ? "YEALINK_DIAL_REQUEST_FAILED" : "AMI_ORIGINATE_REQUEST_FAILED", e);
             status.Text = "Chiama: " + e.Message;
         }

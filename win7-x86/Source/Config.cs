@@ -39,6 +39,9 @@ internal sealed class AppConfig
     // After saving, a user can intentionally disable AutoAnswer and that choice will be preserved.
     public int DialPreferenceSchemaVersion { get; set; } = 0;
     // Remote answering is device-specific, never implied by UCM AMI.
+    public string AvayaGatewayUrl { get; set; } = "";
+    public string AvayaGatewayKeyProtected { get; set; } = "";
+    [JsonIgnore] public string AvayaGatewayKey { get; set; } = "";
     public string PhoneType { get; set; } = "Grandstream"; // Grandstream, Snom, Yealink, Altro
     public bool AutoDetectPhoneAddress { get; set; } = true; // Use live AMI SIP registration, no static IP required.
     public string PhoneAddress { get; set; } = ""; // Optional manual fallback when auto-detection is disabled.
@@ -127,6 +130,7 @@ internal static class ConfigStore
         }
         try
         {
+            config.AvayaGatewayKey = UnprotectField(config.AvayaGatewayKeyProtected, "AVAYA_GATEWAY");
             config.AmiSecret = UnprotectField(config.AmiSecretProtected, "AMI");
             config.LdapSecret = UnprotectField(config.LdapSecretProtected, "LDAP");
             config.ApiSecret = UnprotectField(config.ApiSecretProtected, "CDR");
@@ -180,6 +184,7 @@ internal static class ConfigStore
                 throw new IOException("Impossibile creare backup impostazioni: salvataggio annullato.", e);
             }
         }
+        config.AvayaGatewayKeyProtected = Dpapi.Protect(config.AvayaGatewayKey);
         config.AmiSecretProtected = Dpapi.Protect(config.AmiSecret);
         config.LdapSecretProtected = Dpapi.Protect(config.LdapSecret);
         config.ApiSecretProtected = Dpapi.Protect(config.ApiSecret);
